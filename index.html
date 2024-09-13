@@ -16,14 +16,15 @@
             padding: 10px;
             margin: 0;
         }
-        #videoContainer, #canvasContainer {
+        #videoContainer {
             margin-bottom: 10px;
             position: relative;
             width: 100%;
-            max-width: 100%;
+            flex: 1;
             display: flex;
             justify-content: center;
             align-items: center;
+            overflow: hidden;
         }
         #video {
             width: 100%;
@@ -141,7 +142,7 @@
             body {
                 padding: 5px;
             }
-            #videoContainer, #canvasContainer {
+            #videoContainer {
                 width: 100%;
             }
             video, canvas {
@@ -156,46 +157,59 @@
                 width: 100%;
             }
         }
+        /* Ensure the body takes full height */
+        html, body {
+            height: 100%;
+        }
+        /* Make the app fill the viewport */
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
-    <h1>Camera Photo Capture App</h1>
-    <div id="videoContainer">
-        <video id="video" autoplay playsinline></video>
-    </div>
-    <div id="canvasContainer">
-        <canvas id="canvas"></canvas>
-    </div>
-    <div>
-        <button id="switchCamera" aria-label="Switch Camera">Switch Camera</button>
-        <button id="startCapture" aria-label="Start Capture">Start Capture</button>
-        <!-- Removed the Download Photos button since download is automatic -->
-    </div>
-    <div class="settings">
-        <label for="numPhotos">Number of Photos:</label>
-        <input type="number" id="numPhotos" min="1" max="10" value="4">
+    <div id="app">
+        <h1>Camera Photo Capture App</h1>
+        <div id="videoContainer">
+            <video id="video" autoplay playsinline></video>
+        </div>
+        <div id="canvasContainer">
+            <canvas id="canvas"></canvas>
+        </div>
+        <div>
+            <button id="switchCamera" aria-label="Switch Camera">Switch Camera</button>
+            <button id="startCapture" aria-label="Start Capture">Start Capture</button>
+            <!-- Removed the Download Photos button since download is automatic -->
+        </div>
+        <div class="settings">
+            <label for="numPhotos">Number of Photos:</label>
+            <input type="number" id="numPhotos" min="1" max="10" value="4">
 
-        <label for="zoomLevels">Zoom Levels (comma-separated):</label>
-        <input type="text" id="zoomLevels" value="1, 1.5, 2, 2.5">
+            <label for="zoomLevels">Zoom Levels (comma-separated):</label>
+            <input type="text" id="zoomLevels" value="1, 1.5, 2, 2.5">
 
-        <label for="delayBetweenPhotos">Delays Between Photos (seconds, comma-separated):</label>
-        <input type="text" id="delayBetweenPhotos" value="2, 2, 2, 5">
+            <label for="delayBetweenPhotos">Delays Between Photos (seconds, comma-separated):</label>
+            <input type="text" id="delayBetweenPhotos" value="2, 2, 2, 5">
 
-        <label for="fileNameOption">File Naming Option:</label>
-        <select id="fileNameOption">
-            <option value="auto" selected>Automatic</option>
-            <option value="manual">Manual</option>
-        </select>
+            <label for="fileNameOption">File Naming Option:</label>
+            <select id="fileNameOption">
+                <option value="auto" selected>Automatic</option>
+                <option value="manual">Manual</option>
+            </select>
 
-        <button id="applySettings" aria-label="Apply Settings">Apply Settings</button>
-    </div>
-    <div id="capturedPhotos"></div>
+            <button id="applySettings" aria-label="Apply Settings">Apply Settings</button>
+        </div>
+        <div id="capturedPhotos"></div>
 
-    <!-- Modal -->
-    <div id="modal">
-        <h2>Error</h2>
-        <p id="modalMessage"></p>
-        <button onclick="closeModal()">OK</button>
+        <!-- Modal -->
+        <div id="modal">
+            <h2>Error</h2>
+            <p id="modalMessage"></p>
+            <button onclick="closeModal()">OK</button>
+        </div>
     </div>
 
     <!-- Include app.js -->
