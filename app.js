@@ -23,7 +23,6 @@ async function init() {
     document.getElementById('startCapture').addEventListener('click', startCapture);
     document.getElementById('applySettings').addEventListener('click', applySettings);
     document.getElementById('fileNameOption').addEventListener('change', changeFileNameOption);
-    document.getElementById('downloadPhotos').addEventListener('click', downloadPhotos);
 
     try {
         await startVideoStream();
@@ -34,6 +33,9 @@ async function init() {
 
     // Load capture sound
     captureAudio = new Audio('https://www.soundjay.com/camera/sounds/camera-shutter-click-03.mp3');
+
+    // Adjust canvas size when orientation changes
+    window.addEventListener('resize', adjustCanvasSize);
 }
 
 /**
@@ -54,8 +56,7 @@ async function startVideoStream() {
         await video.play();
         track = stream.getVideoTracks()[0];
         // Set canvas dimensions to match video dimensions
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        adjustCanvasSize();
         console.log("Camera stream started successfully.");
     } catch (err) {
         console.error("Error accessing the camera: ", err);
@@ -67,6 +68,19 @@ async function startVideoStream() {
         } else {
             showModal(`An unexpected error occurred: ${err.message}`);
         }
+    }
+}
+
+/**
+ * Adjusts the canvas size to match the video size.
+ */
+function adjustCanvasSize() {
+    if (video.videoWidth && video.videoHeight) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+    } else {
+        // Set a timeout to retry if video dimensions are not yet available
+        setTimeout(adjustCanvasSize, 500);
     }
 }
 
@@ -144,7 +158,7 @@ async function captureSequence() {
     document.getElementById('startCapture').disabled = false;
     document.getElementById('switchCamera').disabled = false;
     document.getElementById('downloadPhotos').disabled = false;
-    // Removed automatic download after sequence completion, user can click download button
+    await downloadPhotos(); // Automatically start the download
 }
 
 /**
@@ -243,7 +257,7 @@ async function switchCamera() {
 }
 
 /**
- * Downloads the captured photos as a ZIP file.
+ * Downloads the captured photos separately.
  */
 async function downloadPhotos() {
     let exportFileNamePrefix;
@@ -256,14 +270,14 @@ async function downloadPhotos() {
         exportFileNamePrefix = `captured_photo_${new Date().toISOString().replace(/[:.]/g, '-')}`;
     }
 
-    const zip = new JSZip();
     capturedPhotos.forEach((photo, index) => {
-        const imgData = photo.replace(/^data:image\/(png|jpeg);base64,/, '');
-        zip.file(`${exportFileNamePrefix}_${index + 1}.png`, imgData, { base64: true });
+        const link = document.createElement('a');
+        link.href = photo;
+        link.download = `${exportFileNamePrefix}_${index + 1}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     });
-
-    const content = await zip.generateAsync({ type: 'blob' });
-    saveAs(content, `${exportFileNamePrefix}.zip`);
 
     document.getElementById('downloadPhotos').disabled = true;
 }
