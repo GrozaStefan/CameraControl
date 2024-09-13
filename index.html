@@ -19,12 +19,20 @@
         #videoContainer, #canvasContainer {
             margin-bottom: 10px;
             position: relative;
+            width: 100%;
             max-width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         #video {
-            max-width: 100%;
+            width: 100%;
             height: auto;
             border-radius: 10px;
+            object-fit: cover;
+        }
+        #canvas {
+            display: none;
         }
         #capturedPhotos {
             display: flex;
@@ -133,6 +141,9 @@
             body {
                 padding: 5px;
             }
+            #videoContainer, #canvasContainer {
+                width: 100%;
+            }
             video, canvas {
                 width: 100%;
                 height: auto;
@@ -153,12 +164,12 @@
         <video id="video" autoplay playsinline></video>
     </div>
     <div id="canvasContainer">
-        <canvas id="canvas" style="display: none;"></canvas>
+        <canvas id="canvas"></canvas>
     </div>
     <div>
         <button id="switchCamera" aria-label="Switch Camera">Switch Camera</button>
         <button id="startCapture" aria-label="Start Capture">Start Capture</button>
-        <button id="downloadPhotos" disabled aria-label="Download Photos">Download Photos</button>
+        <!-- Removed the Download Photos button since download is automatic -->
     </div>
     <div class="settings">
         <label for="numPhotos">Number of Photos:</label>
@@ -187,9 +198,6 @@
         <button onclick="closeModal()">OK</button>
     </div>
 
-    <!-- Include JSZip and FileSaver libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <!-- Include app.js -->
     <script src="app.js"></script>
 </body>
