@@ -34,8 +34,9 @@ async function init() {
     // Load capture sound
     captureAudio = new Audio('https://www.soundjay.com/camera/sounds/camera-shutter-click-03.mp3');
 
-    // Adjust canvas size when orientation changes
-    window.addEventListener('resize', adjustLayout);
+    // Adjust layout when video metadata is loaded
+    video.addEventListener('loadedmetadata', adjustLayout);
+    // Adjust layout on orientation change
     window.addEventListener('orientationchange', adjustLayout);
 }
 
@@ -56,8 +57,10 @@ async function startVideoStream() {
         video.srcObject = stream;
         await video.play();
         track = stream.getVideoTracks()[0];
-        // Set canvas dimensions to match video dimensions
+
+        // Adjust layout after starting video
         adjustLayout();
+
         console.log("Camera stream started successfully.");
     } catch (err) {
         console.error("Error accessing the camera: ", err);
@@ -76,28 +79,15 @@ async function startVideoStream() {
  * Adjusts the layout and canvas size to match the video size.
  */
 function adjustLayout() {
-    // Adjust video container size
-    const videoContainer = document.getElementById('videoContainer');
-    const aspectRatio = video.videoWidth / video.videoHeight;
-
-    if (aspectRatio) {
-        if (window.innerWidth > window.innerHeight) {
-            // Landscape
-            video.style.width = 'auto';
-            video.style.height = '100%';
-        } else {
-            // Portrait
-            video.style.width = '100%';
-            video.style.height = 'auto';
-        }
+    // Ensure video dimensions are available
+    if (video.videoWidth && video.videoHeight) {
+        // Adjust canvas size
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
     } else {
-        // Retry after video metadata is loaded
-        video.addEventListener('loadedmetadata', adjustLayout);
+        // Retry after a short delay if dimensions are not yet available
+        setTimeout(adjustLayout, 500);
     }
-
-    // Adjust canvas size
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
 }
 
 /**
