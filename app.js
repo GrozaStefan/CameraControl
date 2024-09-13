@@ -35,7 +35,8 @@ async function init() {
     captureAudio = new Audio('https://www.soundjay.com/camera/sounds/camera-shutter-click-03.mp3');
 
     // Adjust canvas size when orientation changes
-    window.addEventListener('resize', adjustCanvasSize);
+    window.addEventListener('resize', adjustLayout);
+    window.addEventListener('orientationchange', adjustLayout);
 }
 
 /**
@@ -56,7 +57,7 @@ async function startVideoStream() {
         await video.play();
         track = stream.getVideoTracks()[0];
         // Set canvas dimensions to match video dimensions
-        adjustCanvasSize();
+        adjustLayout();
         console.log("Camera stream started successfully.");
     } catch (err) {
         console.error("Error accessing the camera: ", err);
@@ -72,16 +73,31 @@ async function startVideoStream() {
 }
 
 /**
- * Adjusts the canvas size to match the video size.
+ * Adjusts the layout and canvas size to match the video size.
  */
-function adjustCanvasSize() {
-    if (video.videoWidth && video.videoHeight) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+function adjustLayout() {
+    // Adjust video container size
+    const videoContainer = document.getElementById('videoContainer');
+    const aspectRatio = video.videoWidth / video.videoHeight;
+
+    if (aspectRatio) {
+        if (window.innerWidth > window.innerHeight) {
+            // Landscape
+            video.style.width = 'auto';
+            video.style.height = '100%';
+        } else {
+            // Portrait
+            video.style.width = '100%';
+            video.style.height = 'auto';
+        }
     } else {
-        // Set a timeout to retry if video dimensions are not yet available
-        setTimeout(adjustCanvasSize, 500);
+        // Retry after video metadata is loaded
+        video.addEventListener('loadedmetadata', adjustLayout);
     }
+
+    // Adjust canvas size
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
 }
 
 /**
@@ -123,7 +139,6 @@ function applySettings() {
     }
 
     currentZoomIndex = 0;
-    document.getElementById('downloadPhotos').disabled = true;
 }
 
 /**
@@ -157,7 +172,6 @@ async function captureSequence() {
     }
     document.getElementById('startCapture').disabled = false;
     document.getElementById('switchCamera').disabled = false;
-    document.getElementById('downloadPhotos').disabled = false;
     await downloadPhotos(); // Automatically start the download
 }
 
@@ -270,16 +284,21 @@ async function downloadPhotos() {
         exportFileNamePrefix = `captured_photo_${new Date().toISOString().replace(/[:.]/g, '-')}`;
     }
 
-    capturedPhotos.forEach((photo, index) => {
+    for (let i = 0; i < capturedPhotos.length; i++) {
+        const photo = capturedPhotos[i];
         const link = document.createElement('a');
         link.href = photo;
-        link.download = `${exportFileNamePrefix}_${index + 1}.png`;
+        link.download = `${exportFileNamePrefix}_${i + 1}.png`;
+
+        // For mobile devices, simulate a click event
+        link.style.display = 'none';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-    });
 
-    document.getElementById('downloadPhotos').disabled = true;
+        // Give time between downloads to ensure they start properly
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
 }
 
 /**
