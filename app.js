@@ -1,3 +1,6 @@
+// app.js
+
+// Define variables
 let video, canvas, capturedPhotos, stream;
 let zoomLevels = [1, 1.5, 2, 2.5];
 let currentZoomIndex = 0;
@@ -8,6 +11,9 @@ let currentCameraFacing = 'environment';
 let track = null;
 let fileNameOption = 'auto';
 
+/**
+ * Initializes the app by setting up event listeners and starting the video stream.
+ */
 async function init() {
     video = document.getElementById('video');
     canvas = document.getElementById('canvas');
@@ -17,6 +23,7 @@ async function init() {
     document.getElementById('startCapture').addEventListener('click', startCapture);
     document.getElementById('applySettings').addEventListener('click', applySettings);
     document.getElementById('fileNameOption').addEventListener('change', changeFileNameOption);
+    document.getElementById('downloadPhotos').addEventListener('click', downloadPhotos);
 
     try {
         await startVideoStream();
@@ -25,44 +32,96 @@ async function init() {
         console.error("Error accessing the camera", err);
     }
 
-    captureAudio = new Audio('https://www.soundjay.com/camera/camera-shutter-sound-effect-6.wav');
+    // Load capture sound
+    captureAudio = new Audio('https://www.soundjay.com/camera/sounds/camera-shutter-click-03.mp3');
 }
 
+/**
+ * Starts the video stream with the current camera facing mode.
+ */
 async function startVideoStream() {
     try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showModal("Your browser does not support camera access. Please use a compatible browser.");
+            return;
+        }
+
         console.log("Requesting camera access...");
         stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: currentCameraFacing, zoom: true } // Use 'environment' or 'user'
+            video: { facingMode: currentCameraFacing, zoom: true }
         });
         video.srcObject = stream;
         await video.play();
+        track = stream.getVideoTracks()[0];
+        // Set canvas dimensions to match video dimensions
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
         console.log("Camera stream started successfully.");
     } catch (err) {
         console.error("Error accessing the camera: ", err);
 
-        // Handle different error types
-        if (err.name === 'NotAllowedError') {
-            showModal("Camera access was denied. Please allow camera permissions and reload the page.");
-        } else if (err.name === 'NotFoundError') {
-            showModal("No camera devices found. Please connect a camera and try again.");
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            showModal("Camera access was denied. Please allow camera permissions in your browser settings and reload the page.");
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+            showModal("No camera devices found. Please connect a camera to your device and try again.");
         } else {
-            showModal("An error occurred while trying to access the camera. Please check your camera settings.");
+            showModal(`An unexpected error occurred: ${err.message}`);
         }
     }
 }
 
-async function applySettings() {
-    numPhotos = parseInt(document.getElementById('numPhotos').value);
-    zoomLevels = document.getElementById('zoomLevels').value.split(',').map(parseFloat);
-    delayBetweenPhotos = document.getElementById('delayBetweenPhotos').value.split(',').map(parseInt);
+/**
+ * Applies user-defined settings for the capture sequence.
+ */
+function applySettings() {
+    const numPhotosInput = parseInt(document.getElementById('numPhotos').value);
+    if (isNaN(numPhotosInput) || numPhotosInput <= 0) {
+        showModal("Please enter a valid number of photos (positive integer).");
+        return;
+    }
+    numPhotos = numPhotosInput;
+
+    zoomLevels = document.getElementById('zoomLevels').value.split(',').map(s => parseFloat(s.trim()));
+    if (zoomLevels.some(isNaN) || zoomLevels.length < numPhotos) {
+        showModal("Please enter valid zoom levels (numbers) and ensure there are enough for each photo.");
+        return;
+    }
+
+    delayBetweenPhotos = document.getElementById('delayBetweenPhotos').value.split(',').map(s => parseInt(s.trim()));
+    if (delayBetweenPhotos.some(isNaN) || delayBetweenPhotos.length < numPhotos) {
+        showModal("Please enter valid delay times (numbers in seconds) and ensure there are enough for each photo.");
+        return;
+    }
+
+    // Ensure zoomLevels and delayBetweenPhotos have sufficient elements
+    if (zoomLevels.length < numPhotos) {
+        const lastZoomLevel = zoomLevels[zoomLevels.length - 1];
+        while (zoomLevels.length < numPhotos) {
+            zoomLevels.push(lastZoomLevel);
+        }
+    }
+
+    if (delayBetweenPhotos.length < numPhotos) {
+        const lastDelay = delayBetweenPhotos[delayBetweenPhotos.length - 1];
+        while (delayBetweenPhotos.length < numPhotos) {
+            delayBetweenPhotos.push(lastDelay);
+        }
+    }
+
     currentZoomIndex = 0;
     document.getElementById('downloadPhotos').disabled = true;
 }
 
+/**
+ * Changes the file naming option based on user selection.
+ */
 function changeFileNameOption() {
     fileNameOption = document.getElementById('fileNameOption').value;
 }
 
+/**
+ * Starts the capture sequence.
+ */
 async function startCapture() {
     capturedPhotos = [];
     document.getElementById('capturedPhotos').innerHTML = '';
@@ -72,46 +131,60 @@ async function startCapture() {
     await captureSequence();
 }
 
+/**
+ * Captures a sequence of photos based on user settings.
+ */
 async function captureSequence() {
-    if (currentZoomIndex < numPhotos) {
+    for (currentZoomIndex = 0; currentZoomIndex < numPhotos; currentZoomIndex++) {
         if (currentZoomIndex > 0) {
             await countdown(delayBetweenPhotos[currentZoomIndex]);
         }
         await capturePhoto();
-        currentZoomIndex++;
-        await captureSequence();
-    } else {
-        document.getElementById('startCapture').disabled = false;
-        document.getElementById('switchCamera').disabled = false;
-        document.getElementById('downloadPhotos').disabled = false;
-        await downloadPhotos();
     }
+    document.getElementById('startCapture').disabled = false;
+    document.getElementById('switchCamera').disabled = false;
+    document.getElementById('downloadPhotos').disabled = false;
+    // Removed automatic download after sequence completion, user can click download button
 }
 
+/**
+ * Displays a countdown before capturing the next photo.
+ * @param {number} seconds - Number of seconds for the countdown.
+ */
 async function countdown(seconds) {
-    const countdownElement = document.createElement('div');
+    let countdownElement = document.getElementById('countdown');
+    if (countdownElement) {
+        document.body.removeChild(countdownElement);
+    }
+    countdownElement = document.createElement('div');
     countdownElement.style.position = 'fixed';
     countdownElement.style.top = '50%';
     countdownElement.style.left = '50%';
     countdownElement.style.transform = 'translate(-50%, -50%)';
-    countdownElement.style.fontSize = '24px';
+    countdownElement.style.fontSize = '48px';
     countdownElement.style.color = 'white';
     countdownElement.style.backgroundColor = 'rgba(0,0,0,0.5)';
-    countdownElement.style.padding = '120px';
-    countdownElement.style.borderRadius = '5px';
+    countdownElement.style.padding = '50px';
+    countdownElement.style.borderRadius = '10px';
     countdownElement.id = 'countdown';
     document.body.appendChild(countdownElement);
 
     for (let i = seconds; i > 0; i--) {
-        countdownElement.textContent = `Next photo in: ${i}`;
+        countdownElement.textContent = `${i}`;
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     document.body.removeChild(countdownElement);
 }
 
+/**
+ * Captures a photo with the current zoom level.
+ */
 async function capturePhoto() {
     const zoom = zoomLevels[currentZoomIndex];
+
+    // Show loading spinner
+    document.body.classList.add('loading');
 
     if (track && 'zoom' in track.getCapabilities()) {
         const capabilities = track.getCapabilities();
@@ -122,11 +195,14 @@ async function capturePhoto() {
             await track.applyConstraints(constraints);
         } else {
             console.warn(`Zoom level ${zoom} is out of range. Supported range: ${capabilities.zoom.min} - ${capabilities.zoom.max}`);
+            showModal(`Zoom level ${zoom} is not supported by your camera. Supported range: ${capabilities.zoom.min} - ${capabilities.zoom.max}`);
         }
     }
 
+    // Give time for zoom to adjust
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const photoData = canvas.toDataURL('image/png');
@@ -140,14 +216,22 @@ async function capturePhoto() {
     document.getElementById('capturedPhotos').appendChild(img);
 
     captureAudio.play();
-    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Keep the delay if necessary
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Hide loading spinner
+    document.body.classList.remove('loading');
 }
 
+/**
+ * Switches between front and back cameras.
+ */
 async function switchCamera() {
     if (stream) {
         stream.getTracks().forEach(track => track.stop());
     }
-
+    track = null;
     currentCameraFacing = currentCameraFacing === 'user' ? 'environment' : 'user';
 
     try {
@@ -158,8 +242,10 @@ async function switchCamera() {
     }
 }
 
+/**
+ * Downloads the captured photos as a ZIP file.
+ */
 async function downloadPhotos() {
-    // Check if the user wants to name the file manually or automatically
     let exportFileNamePrefix;
     if (fileNameOption === 'manual') {
         exportFileNamePrefix = prompt("Enter a prefix for the exported photos:");
@@ -170,23 +256,31 @@ async function downloadPhotos() {
         exportFileNamePrefix = `captured_photo_${new Date().toISOString().replace(/[:.]/g, '-')}`;
     }
 
-    // Loop through each captured photo and trigger the download
+    const zip = new JSZip();
     capturedPhotos.forEach((photo, index) => {
-        const link = document.createElement('a');
-        link.href = photo;
-        link.download = `${exportFileNamePrefix}_${index + 1}.png`; // Naming each photo with the prefix or timestamp
-        link.click(); // Automatically trigger the download for each photo
+        const imgData = photo.replace(/^data:image\/(png|jpeg);base64,/, '');
+        zip.file(`${exportFileNamePrefix}_${index + 1}.png`, imgData, { base64: true });
     });
 
-    document.getElementById('downloadPhotos').disabled = true; // Disable download button after photos are downloaded
+    const content = await zip.generateAsync({ type: 'blob' });
+    saveAs(content, `${exportFileNamePrefix}.zip`);
+
+    document.getElementById('downloadPhotos').disabled = true;
 }
 
+/**
+ * Displays a modal with a message.
+ * @param {string} message - The message to display in the modal.
+ */
 function showModal(message) {
     const modal = document.getElementById('modal');
     document.getElementById('modalMessage').textContent = message;
     modal.style.display = 'block';
 }
 
+/**
+ * Closes the modal.
+ */
 function closeModal() {
     document.getElementById('modal').style.display = 'none';
 }
