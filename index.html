@@ -8,53 +8,57 @@
         body, html {
             height: 100%;
             margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            flex-direction: column;
             overflow: hidden;
         }
         #app {
+            flex: 1;
             display: flex;
             flex-direction: column;
-            height: 100vh;
+            align-items: center;
             background-color: #f5f5f5;
-        }
-        h1 {
-            color: #6200ea;
-            margin: 10px 0;
-            font-size: 24px;
-            text-align: center;
+            padding: 10px;
+            box-sizing: border-box;
+            max-height: 100vh;
+            overflow-y: auto;
         }
         #videoContainer {
             position: relative;
             width: 100%;
-            flex: 1;
+            height: 0;
+            padding-bottom: 75%; /* 4:3 aspect ratio */
             background-color: black;
             overflow: hidden;
+            transition: all 0.3s ease;
         }
-        #draggableContainer {
+        #video {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            touch-action: none;
-        }
-        #video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            object-fit: contain;
         }
         #canvas {
             display: none;
         }
-        .controls {
+        #capturedPhotos {
             display: flex;
+            flex-wrap: wrap;
             justify-content: center;
-            padding: 10px;
-            background-color: #f0f0f0;
+            width: 100%;
+        }
+        .capturedPhoto {
+            margin: 5px;
+            border-radius: 5px;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+            max-width: 45%;
+            height: auto;
         }
         button {
-            margin: 0 5px;
+            margin: 5px;
             padding: 10px 15px;
             font-size: 16px;
             background-color: #6200ea;
@@ -62,35 +66,83 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            transition: background-color 0.3s ease;
         }
         button:hover {
             background-color: #3700b3;
         }
         .settings {
+            margin-top: 10px;
             padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
             background-color: white;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            width: 100%;
+            max-width: 400px;
         }
         .settings label {
-            display: block;
+            font-size: 14px;
+            font-weight: 500;
             margin-bottom: 5px;
         }
         .settings input, .settings select {
-            width: 100%;
-            padding: 8px;
             margin-bottom: 10px;
+            padding: 8px;
+            width: 100%;
             box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
         }
-        #capturedPhotos {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            padding: 10px;
+        h1 {
+            color: #6200ea;
+            margin-bottom: 10px;
+            font-size: 24px;
+            text-align: center;
         }
-        .capturedPhoto {
-            margin: 5px;
-            max-width: 45%;
-            height: auto;
+        #modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 400px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+        #modal h2 {
+            color: #6200ea;
+            margin-bottom: 10px;
+            font-size: 20px;
+            text-align: center;
+        }
+        #modal button {
+            width: 100%;
+        }
+        .loading::before {
+            content: '';
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            border: 6px solid #ccc;
+            border-top-color: #6200ea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 0.8s linear infinite;
+            transform: translate(-50%, -50%);
+            z-index: 1001;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
         #zoomControls {
             position: fixed;
@@ -117,33 +169,26 @@
             #app {
                 flex-direction: row;
                 flex-wrap: wrap;
-            }
-            h1 {
-                width: 100%;
-                order: -1;
+                justify-content: space-between;
+                align-items: flex-start;
             }
             #videoContainer {
-                width: 70%;
-                height: calc(100vh - 100px);
+                width: 60%;
+                padding-bottom: 45%; /* Maintain the 4:3 aspect ratio (60% * 75%) */
             }
             .controls-settings-container {
-                width: 30%;
+                width: 35%;
                 display: flex;
                 flex-direction: column;
-                justify-content: flex-start;
-                padding: 10px;
-                box-sizing: border-box;
             }
             .controls {
-                flex-direction: column;
-                align-items: stretch;
-                background-color: transparent;
-            }
-            .controls button {
-                margin: 5px 0;
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 10px;
             }
             .settings {
-                margin-top: 10px;
+                width: 100%;
+                max-width: none;
             }
             #capturedPhotos {
                 width: 100%;
@@ -156,9 +201,7 @@
     <div id="app">
         <h1>Camera Photo Capture App</h1>
         <div id="videoContainer">
-            <div id="draggableContainer">
-                <video id="video" autoplay playsinline></video>
-            </div>
+            <video id="video" autoplay playsinline></video>
         </div>
         <div id="canvasContainer">
             <canvas id="canvas"></canvas>
@@ -188,12 +231,18 @@
             </div>
         </div>
         <div id="capturedPhotos"></div>
+
+        <div id="modal">
+            <h2>Error</h2>
+            <p id="modalMessage"></p>
+            <button onclick="closeModal()">OK</button>
+        </div>
     </div>
 
     <div id="zoomControls">
-        <button id="zoomOut" aria-label="Zoom Out">-</button>
+        <button id="zoomOut">-</button>
         <span id="zoomLevel">100%</span>
-        <button id="zoomIn" aria-label="Zoom In">+</button>
+        <button id="zoomIn">+</button>
     </div>
 
     <script src="app.js"></script>
