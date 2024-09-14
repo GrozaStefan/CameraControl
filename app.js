@@ -1,5 +1,3 @@
-// app.js
-
 // Define variables
 let video, canvas, capturedPhotos, stream;
 let zoomLevels = [1, 1.5, 2, 2.5];
@@ -10,6 +8,11 @@ let captureAudio;
 let currentCameraFacing = 'environment';
 let track = null;
 let fileNameOption = 'auto';
+
+let currentZoom = 1;
+const zoomStep = 0.1;
+const minZoom = 0.5;
+const maxZoom = 2;
 
 /**
  * Initializes the app by setting up event listeners and starting the video stream.
@@ -38,6 +41,8 @@ async function init() {
     video.addEventListener('loadedmetadata', adjustLayout);
     // Adjust layout on orientation change
     window.addEventListener('orientationchange', adjustLayout);
+
+    initZoomControls();
 }
 
 /**
@@ -268,7 +273,7 @@ async function downloadPhotos() {
     if (fileNameOption === 'manual') {
         exportFileNamePrefix = prompt("Enter a prefix for the exported photos:");
         if (!exportFileNamePrefix) {
-            exportFileNamePrefix = `captured_photo`;
+            exportFileNamePrefix = 'captured_photo';
         }
     } else {
         exportFileNamePrefix = `captured_photo_${new Date().toISOString().replace(/[:.]/g, '-')}`;
@@ -306,6 +311,42 @@ function showModal(message) {
  */
 function closeModal() {
     document.getElementById('modal').style.display = 'none';
+}
+
+/**
+ * Updates the zoom level of the app.
+ */
+function updateZoom() {
+    document.getElementById('app').style.transform = `scale(${currentZoom})`;
+    document.getElementById('zoomLevel').textContent = `${Math.round(currentZoom * 100)}%`;
+}
+
+/**
+ * Increases the zoom level of the app.
+ */
+function zoomIn() {
+    if (currentZoom < maxZoom) {
+        currentZoom += zoomStep;
+        updateZoom();
+    }
+}
+
+/**
+ * Decreases the zoom level of the app.
+ */
+function zoomOut() {
+    if (currentZoom > minZoom) {
+        currentZoom -= zoomStep;
+        updateZoom();
+    }
+}
+
+/**
+ * Initializes the zoom controls.
+ */
+function initZoomControls() {
+    document.getElementById('zoomIn').addEventListener('click', zoomIn);
+    document.getElementById('zoomOut').addEventListener('click', zoomOut);
 }
 
 window.onload = init;
