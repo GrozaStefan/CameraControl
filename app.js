@@ -85,6 +85,41 @@ async function startVideoStream() {
 }
 
 /**
+ * Handles orientation change events.
+ */
+function handleOrientationChange() {
+    console.log('Handling orientation change...');
+    const app = document.getElementById('app');
+    const videoContainer = document.getElementById('videoContainer');
+    const draggableContainer = document.getElementById('draggableContainer');
+    const video = document.getElementById('video');
+
+    if (window.innerHeight > window.innerWidth) {
+        // Portrait mode
+        app.style.flexDirection = 'column';
+        videoContainer.style.width = '100%';
+        videoContainer.style.height = '';
+        console.log('Switched to portrait mode');
+    } else {
+        // Landscape mode
+        app.style.flexDirection = 'row';
+        videoContainer.style.width = '70%';
+        videoContainer.style.height = 'calc(100vh - 50px)';
+        console.log('Switched to landscape mode');
+    }
+
+    // Reset the position of the draggable container
+    draggableContainer.style.left = '0';
+    draggableContainer.style.top = '0';
+
+    // Adjust video size
+    video.style.width = '100%';
+    video.style.height = '100%';
+
+    adjustLayout();
+}
+
+/**
  * Adjusts the layout and canvas size to match the video size.
  */
 function adjustLayout() {
@@ -93,26 +128,25 @@ function adjustLayout() {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         console.log(`Canvas size adjusted to ${canvas.width}x${canvas.height}`);
+
+        // Adjust draggable container size to match video aspect ratio
+        const videoContainer = document.getElementById('videoContainer');
+        const draggableContainer = document.getElementById('draggableContainer');
+        const aspectRatio = video.videoWidth / video.videoHeight;
+        
+        if (window.innerHeight > window.innerWidth) {
+            // Portrait mode
+            draggableContainer.style.width = '100%';
+            draggableContainer.style.height = `${videoContainer.offsetWidth / aspectRatio}px`;
+        } else {
+            // Landscape mode
+            draggableContainer.style.height = '100%';
+            draggableContainer.style.width = `${videoContainer.offsetHeight * aspectRatio}px`;
+        }
     } else {
         console.log('Video dimensions not available, retrying in 500ms');
         setTimeout(adjustLayout, 500);
     }
-}
-
-/**
- * Handles orientation change events.
- */
-function handleOrientationChange() {
-    console.log('Handling orientation change...');
-    const app = document.getElementById('app');
-    if (window.innerHeight > window.innerWidth) {
-        app.style.flexDirection = 'column';
-        console.log('Switched to portrait mode');
-    } else {
-        app.style.flexDirection = 'row';
-        console.log('Switched to landscape mode');
-    }
-    adjustLayout();
 }
 
 /**
@@ -388,6 +422,7 @@ function startDragging(e) {
         startX = e.clientX;
         startY = e.clientY;
     }
+    const draggableContainer = document.getElementById('draggableContainer');
     initialX = draggableContainer.offsetLeft;
     initialY = draggableContainer.offsetTop;
     e.preventDefault();
@@ -408,6 +443,7 @@ function drag(e) {
     const deltaX = currentX - startX;
     const deltaY = currentY - startY;
     
+    const draggableContainer = document.getElementById('draggableContainer');
     draggableContainer.style.left = `${initialX + deltaX}px`;
     draggableContainer.style.top = `${initialY + deltaY}px`;
 }
