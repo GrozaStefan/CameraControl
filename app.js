@@ -309,8 +309,8 @@ async function capturePhoto() {
     const tempCtx = tempCanvas.getContext('2d');
     tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
 
-    // Get the image data at full resolution
-    const photoData = tempCanvas.toDataURL('image/jpeg', 1.0);
+    // Get the image data as WebP
+    const photoData = tempCanvas.toDataURL('image/webp', 0.9);
     capturedPhotos.push(photoData);
 
     // Create a thumbnail for display
@@ -327,8 +327,7 @@ async function capturePhoto() {
 
     // Hide loading spinner
     document.body.classList.remove('loading');
-    console.log('Photo captured successfully');
-}
+    console.log('Photo captured successfully in WebP format');
 
 /**
  * Switches between front and back cameras.
@@ -369,7 +368,7 @@ async function downloadPhotos() {
         const photo = capturedPhotos[i];
         const link = document.createElement('a');
         link.href = photo;
-        link.download = `${exportFileNamePrefix}_${i + 1}.jpg`;
+        link.download = `${exportFileNamePrefix}_${i + 1}.webp`;
 
         // For mobile devices, simulate a click event
         link.style.display = 'none';
@@ -380,8 +379,7 @@ async function downloadPhotos() {
         // Give time between downloads to ensure they start properly
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
-    console.log('Photos downloaded successfully');
-}
+    console.log('Photos downloaded successfully in WebP format');
 
 /**
  * Initializes the zoom controls.
