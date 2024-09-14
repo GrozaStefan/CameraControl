@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Camera Photo Capture App</title>
     <style>
         body, html {
@@ -17,6 +17,7 @@
             flex-direction: column;
             height: 100vh;
             background-color: #f5f5f5;
+            overflow-y: auto;
         }
         h1 {
             color: #6200ea;
@@ -27,7 +28,7 @@
         #videoContainer {
             position: relative;
             width: 100%;
-            flex: 1;
+            height: 50vh;
             background-color: black;
             overflow: hidden;
         }
@@ -123,12 +124,12 @@
                 order: -1;
             }
             #videoContainer {
-                width: 70%;
-                height: calc(100vh - 50px); /* Adjust for the header */
+                width: 60%;
+                height: calc(100vh - 50px);
             }
             .controls-settings-container {
-                width: 30%;
-                height: calc(100vh - 50px); /* Adjust for the header */
+                width: 40%;
+                height: calc(100vh - 50px);
                 display: flex;
                 flex-direction: column;
                 justify-content: flex-start;
