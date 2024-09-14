@@ -124,15 +124,17 @@
             }
             #videoContainer {
                 width: 70%;
-                height: calc(100vh - 100px);
+                height: calc(100vh - 50px); /* Adjust for the header */
             }
             .controls-settings-container {
                 width: 30%;
+                height: calc(100vh - 50px); /* Adjust for the header */
                 display: flex;
                 flex-direction: column;
                 justify-content: flex-start;
                 padding: 10px;
                 box-sizing: border-box;
+                overflow-y: auto;
             }
             .controls {
                 flex-direction: column;
