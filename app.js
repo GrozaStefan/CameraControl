@@ -63,12 +63,27 @@ async function startVideoStream() {
             throw new Error("Your browser does not support camera access.");
         }
 
-        stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: currentCameraFacing }
-        });
+        const constraints = {
+            video: {
+                facingMode: currentCameraFacing,
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+                aspectRatio: 16/9
+            }
+        };
+
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
         video.srcObject = stream;
         await video.play();
         track = stream.getVideoTracks()[0];
+
+        // Apply the highest available resolution
+        const capabilities = track.getCapabilities();
+        const settings = {
+            width: capabilities.width.max,
+            height: capabilities.height.max
+        };
+        await track.applyConstraints(settings);
 
         console.log('Video stream started successfully');
     } catch (err) {
@@ -287,12 +302,18 @@ async function capturePhoto() {
     // Give time for zoom to adjust
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // Create a temporary canvas with the video's native size
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = video.videoWidth;
+    tempCanvas.height = video.videoHeight;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
 
-    const photoData = canvas.toDataURL('image/png');
+    // Get the image data at full resolution
+    const photoData = tempCanvas.toDataURL('image/jpeg', 1.0);
     capturedPhotos.push(photoData);
 
+    // Create a thumbnail for display
     const img = document.createElement('img');
     img.src = photoData;
     img.className = 'capturedPhoto';
@@ -348,7 +369,7 @@ async function downloadPhotos() {
         const photo = capturedPhotos[i];
         const link = document.createElement('a');
         link.href = photo;
-        link.download = `${exportFileNamePrefix}_${i + 1}.png`;
+        link.download = `${exportFileNamePrefix}_${i + 1}.jpg`;
 
         // For mobile devices, simulate a click event
         link.style.display = 'none';
