@@ -3,7 +3,7 @@
 <head>
     <!-- index.html -->
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Camera Photo Capture App</title>
     <style>
         /* index.html CSS */
@@ -21,10 +21,21 @@
             align-items: center;
             background-color: #f5f5f5;
             padding: 10px;
+            box-sizing: border-box;
+        }
+        #header {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        #header h1 {
+            color: #6200ea;
+            margin: 0;
+            font-size: 24px;
         }
         #videoContainer {
             position: relative;
-            flex: 1;
+            flex: 2;
             width: 100%;
             display: flex;
             justify-content: center;
@@ -33,25 +44,18 @@
             overflow: hidden;
         }
         #video {
-            width: auto;
+            width: 100%;
             height: 100%;
             object-fit: cover;
         }
         #canvas {
             display: none;
         }
-        #capturedPhotos {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
+        #controls {
             width: 100%;
-        }
-        .capturedPhoto {
-            margin: 5px;
-            border-radius: 5px;
-            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
-            max-width: 45%;
-            height: auto;
+            display: flex;
+            justify-content: space-around;
+            margin: 10px 0;
         }
         button {
             margin: 5px;
@@ -79,6 +83,7 @@
             align-items: flex-start;
             width: 100%;
             max-width: 400px;
+            box-sizing: border-box;
         }
         .settings label {
             font-size: 14px;
@@ -94,11 +99,32 @@
             border-radius: 5px;
             font-size: 14px;
         }
-        h1 {
-            color: #6200ea;
-            margin-bottom: 10px;
-            font-size: 24px;
-            text-align: center;
+        .settings .zoom-control {
+            width: 100%;
+            display: flex;
+            align-items: center;
+        }
+        .settings .zoom-control label {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        .settings .zoom-control input[type="range"] {
+            flex: 2;
+            margin-left: 10px;
+        }
+        #capturedPhotos {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .capturedPhoto {
+            margin: 5px;
+            border-radius: 5px;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+            max-width: 45%;
+            height: auto;
         }
         /* Modal Styling */
         #modal {
@@ -144,30 +170,44 @@
         }
         /* Responsive styling */
         @media (orientation: portrait) {
+            #videoContainer {
+                flex: 2;
+            }
             #video {
                 width: 100%;
                 height: auto;
             }
         }
         @media (orientation: landscape) {
-            #video {
-                width: auto;
-                height: 100%;
+            #app {
+                flex-direction: row;
+                align-items: flex-start;
+                padding: 10px;
             }
-        }
-        button {
-            flex: none;
+            #videoContainer {
+                flex: 3;
+                height: 100vh;
+            }
+            .settings {
+                flex: 1;
+                margin-left: 20px;
+                max-width: 300px;
+            }
+            #capturedPhotos {
+                flex: 1;
+                max-height: 50vh;
+                overflow-y: auto;
+            }
         }
     </style>
 </head>
 <body>
     <div id="app">
-        <h1>Camera Photo Capture App</h1>
+        <div id="header">
+            <h1>Camera Photo Capture App</h1>
+        </div>
         <div id="videoContainer">
             <video id="video" autoplay playsinline></video>
-        </div>
-        <div id="canvasContainer">
-            <canvas id="canvas"></canvas>
         </div>
         <div>
             <button id="switchCamera" aria-label="Switch Camera">Switch Camera</button>
@@ -189,6 +229,11 @@
                 <option value="auto" selected>Automatic</option>
                 <option value="manual">Manual</option>
             </select>
+
+            <div class="zoom-control">
+                <label for="liveZoom">Live Zoom:</label>
+                <input type="range" id="liveZoom" min="1" max="3" step="0.1" value="1">
+            </div>
 
             <button id="applySettings" aria-label="Apply Settings">Apply Settings</button>
         </div>
