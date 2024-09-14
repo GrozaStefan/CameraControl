@@ -14,9 +14,6 @@ const zoomStep = 0.1;
 const minZoom = 0.5;
 const maxZoom = 2;
 
-let isDragging = false;
-let startX, startY, initialX, initialY;
-
 /**
  * Initializes the app by setting up event listeners and starting the video stream.
  */
@@ -43,12 +40,9 @@ async function init() {
     // Adjust layout when video metadata is loaded
     video.addEventListener('loadedmetadata', adjustLayout);
     // Adjust layout on orientation change
-    window.addEventListener('orientationchange', handleOrientationChange);
-    window.addEventListener('resize', handleOrientationChange);
+    window.addEventListener('orientationchange', adjustLayout);
 
     initZoomControls();
-    initDraggable();
-    handleOrientationChange();
 }
 
 /**
@@ -99,21 +93,6 @@ function adjustLayout() {
         // Retry after a short delay if dimensions are not yet available
         setTimeout(adjustLayout, 500);
     }
-}
-
-/**
- * Handles orientation change events.
- */
-function handleOrientationChange() {
-    const app = document.getElementById('app');
-    if (window.innerHeight > window.innerWidth) {
-        // Portrait mode
-        app.style.flexDirection = 'column';
-    } else {
-        // Landscape mode
-        app.style.flexDirection = 'row';
-    }
-    adjustLayout(); // Call this function to readjust video and canvas sizes
 }
 
 /**
@@ -216,3 +195,160 @@ async function countdown(seconds) {
     for (let i = seconds; i > 0; i--) {
         countdownElement.textContent = `${i}`;
         await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    document.body.removeChild(countdownElement);
+}
+
+/**
+ * Captures a photo with the current zoom level.
+ */
+async function capturePhoto() {
+    const zoom = zoomLevels[currentZoomIndex];
+
+    // Show loading spinner
+    document.body.classList.add('loading');
+
+    if (track && 'zoom' in track.getCapabilities()) {
+        const capabilities = track.getCapabilities();
+        if (capabilities.zoom && zoom >= capabilities.zoom.min && zoom <= capabilities.zoom.max) {
+            const constraints = {
+                advanced: [{ zoom: zoom }]
+            };
+            await track.applyConstraints(constraints);
+        } else {
+            console.warn(`Zoom level ${zoom} is out of range. Supported range: ${capabilities.zoom.min} - ${capabilities.zoom.max}`);
+            showModal(`Zoom level ${zoom} is not supported by your camera. Supported range: ${capabilities.zoom.min} - ${capabilities.zoom.max}`);
+        }
+    }
+
+    // Give time for zoom to adjust
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const photoData = canvas.toDataURL('image/png');
+    capturedPhotos.push(photoData);
+
+    const img = document.createElement('img');
+    img.src = photoData;
+    img.className = 'capturedPhoto';
+    img.width = 160;
+    img.height = 120;
+    document.getElementById('capturedPhotos').appendChild(img);
+
+    captureAudio.play();
+
+    // Keep the delay if necessary
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Hide loading spinner
+    document.body.classList.remove('loading');
+}
+
+/**
+ * Switches between front and back cameras.
+ */
+async function switchCamera() {
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+    }
+    track = null;
+    currentCameraFacing = currentCameraFacing === 'user' ? 'environment' : 'user';
+
+    try {
+        await startVideoStream();
+    } catch (err) {
+        showModal("Error switching camera. Please try again.");
+        console.error("Error switching camera", err);
+    }
+}
+
+/**
+ * Downloads the captured photos separately.
+ */
+async function downloadPhotos() {
+    let exportFileNamePrefix;
+    if (fileNameOption === 'manual') {
+        exportFileNamePrefix = prompt("Enter a prefix for the exported photos:");
+        if (!exportFileNamePrefix) {
+            exportFileNamePrefix = 'captured_photo';
+        }
+    } else {
+        exportFileNamePrefix = `captured_photo_${new Date().toISOString().replace(/[:.]/g, '-')}`;
+    }
+
+    for (let i = 0; i < capturedPhotos.length; i++) {
+        const photo = capturedPhotos[i];
+        const link = document.createElement('a');
+        link.href = photo;
+        link.download = `${exportFileNamePrefix}_${i + 1}.png`;
+
+        // For mobile devices, simulate a click event
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Give time between downloads to ensure they start properly
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+}
+
+/**
+ * Displays a modal with a message.
+ * @param {string} message - The message to display in the modal.
+ */
+function showModal(message) {
+    const modal = document.getElementById('modal');
+    document.getElementById('modalMessage').textContent = message;
+    modal.style.display = 'block';
+}
+
+/**
+ * Closes the modal.
+ */
+function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+}
+
+/**
+ * Updates the zoom level of the camera feed.
+ */
+function updateZoom() {
+    const videoContainer = document.getElementById('videoContainer');
+    videoContainer.style.transform = `scale(${currentZoom})`;
+    videoContainer.style.transformOrigin = 'center center';
+    document.getElementById('zoomLevel').textContent = `${Math.round(currentZoom * 100)}%`;
+}
+
+/**
+ * Increases the zoom level of the camera feed.
+ */
+function zoomIn() {
+    if (currentZoom < maxZoom) {
+        currentZoom += zoomStep;
+        updateZoom();
+    }
+}
+
+/**
+ * Decreases the zoom level of the camera feed.
+ */
+function zoomOut() {
+    if (currentZoom > minZoom) {
+        currentZoom -= zoomStep;
+        updateZoom();
+    }
+}
+
+/**
+ * Initializes the zoom controls.
+ */
+function initZoomControls() {
+    document.getElementById('zoomIn').addEventListener('click', zoomIn);
+    document.getElementById('zoomOut').addEventListener('click', zoomOut);
+}
+
+window.onload = init;
