@@ -23,16 +23,15 @@
             box-sizing: border-box;
             max-height: 100vh;
             overflow-y: auto;
-            transform-origin: top left;
         }
         #videoContainer {
             position: relative;
             width: 100%;
             height: 0;
             padding-bottom: 75%; /* 4:3 aspect ratio */
-            max-height: 70vh;
             background-color: black;
             overflow: hidden;
+            transition: all 0.3s ease;
         }
         #video {
             position: absolute;
@@ -170,18 +169,26 @@
             #app {
                 flex-direction: row;
                 flex-wrap: wrap;
-                justify-content: center;
+                justify-content: space-between;
                 align-items: flex-start;
             }
             #videoContainer {
-                width: 50%; /* Reduced from 70% to 50% */
-                padding-bottom: 37.5%; /* Maintain the 4:3 aspect ratio (50% * 75%) */
-                max-height: 60vh; /* Reduced from 80vh to 60vh */
+                width: 60%;
+                padding-bottom: 45%; /* Maintain the 4:3 aspect ratio (60% * 75%) */
+            }
+            .controls-settings-container {
+                width: 35%;
+                display: flex;
+                flex-direction: column;
+            }
+            .controls {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 10px;
             }
             .settings {
-                width: 45%; /* Increased from 25% to 45% */
+                width: 100%;
                 max-width: none;
-                margin-left: 10px;
             }
             #capturedPhotos {
                 width: 100%;
@@ -199,27 +206,29 @@
         <div id="canvasContainer">
             <canvas id="canvas"></canvas>
         </div>
-        <div>
-            <button id="switchCamera" aria-label="Switch Camera">Switch Camera</button>
-            <button id="startCapture" aria-label="Start Capture">Start Capture</button>
-        </div>
-        <div class="settings">
-            <label for="numPhotos">Number of Photos:</label>
-            <input type="number" id="numPhotos" min="1" max="10" value="4">
+        <div class="controls-settings-container">
+            <div class="controls">
+                <button id="switchCamera" aria-label="Switch Camera">Switch Camera</button>
+                <button id="startCapture" aria-label="Start Capture">Start Capture</button>
+            </div>
+            <div class="settings">
+                <label for="numPhotos">Number of Photos:</label>
+                <input type="number" id="numPhotos" min="1" max="10" value="4">
 
-            <label for="zoomLevels">Zoom Levels (comma-separated):</label>
-            <input type="text" id="zoomLevels" value="1, 1.5, 2, 2.5">
+                <label for="zoomLevels">Zoom Levels (comma-separated):</label>
+                <input type="text" id="zoomLevels" value="1, 1.5, 2, 2.5">
 
-            <label for="delayBetweenPhotos">Delays Between Photos (seconds, comma-separated):</label>
-            <input type="text" id="delayBetweenPhotos" value="2, 2, 2, 5">
+                <label for="delayBetweenPhotos">Delays Between Photos (seconds, comma-separated):</label>
+                <input type="text" id="delayBetweenPhotos" value="2, 2, 2, 5">
 
-            <label for="fileNameOption">File Naming Option:</label>
-            <select id="fileNameOption">
-                <option value="auto" selected>Automatic</option>
-                <option value="manual">Manual</option>
-            </select>
+                <label for="fileNameOption">File Naming Option:</label>
+                <select id="fileNameOption">
+                    <option value="auto" selected>Automatic</option>
+                    <option value="manual">Manual</option>
+                </select>
 
-            <button id="applySettings" aria-label="Apply Settings">Apply Settings</button>
+                <button id="applySettings" aria-label="Apply Settings">Apply Settings</button>
+            </div>
         </div>
         <div id="capturedPhotos"></div>
 
