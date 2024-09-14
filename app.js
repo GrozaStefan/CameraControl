@@ -98,12 +98,12 @@ function handleOrientationChange() {
         // Portrait mode
         app.style.flexDirection = 'column';
         videoContainer.style.width = '100%';
-        videoContainer.style.height = '';
+        videoContainer.style.height = '50vh';
         console.log('Switched to portrait mode');
     } else {
         // Landscape mode
         app.style.flexDirection = 'row';
-        videoContainer.style.width = '70%';
+        videoContainer.style.width = '60%';
         videoContainer.style.height = 'calc(100vh - 50px)';
         console.log('Switched to landscape mode');
     }
