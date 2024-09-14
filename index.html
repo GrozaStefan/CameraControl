@@ -1,18 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- index.html -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Camera Photo Capture App</title>
     <style>
-        /* index.html CSS */
         body, html {
             height: 100%;
             margin: 0;
             font-family: 'Roboto', sans-serif;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
         #app {
             flex: 1;
@@ -21,21 +20,26 @@
             align-items: center;
             background-color: #f5f5f5;
             padding: 10px;
+            box-sizing: border-box;
+            max-height: 100vh;
+            overflow-y: auto;
         }
         #videoContainer {
             position: relative;
-            flex: 1;
             width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            height: 0;
+            padding-bottom: 75%;
+            max-height: 70vh;
             background-color: black;
             overflow: hidden;
         }
         #video {
-            width: auto;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
         }
         #canvas {
             display: none;
@@ -100,7 +104,6 @@
             font-size: 24px;
             text-align: center;
         }
-        /* Modal Styling */
         #modal {
             display: none;
             position: fixed;
@@ -124,7 +127,6 @@
         #modal button {
             width: 100%;
         }
-        /* Loading Spinner */
         .loading::before {
             content: '';
             position: fixed;
@@ -142,17 +144,25 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        /* Responsive styling */
-        @media (orientation: portrait) {
-            #video {
-                width: 100%;
-                height: auto;
-            }
-        }
         @media (orientation: landscape) {
-            #video {
-                width: auto;
-                height: 100%;
+            #app {
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            #videoContainer {
+                width: 70%;
+                padding-bottom: 52.5%;
+                max-height: 80vh;
+            }
+            .settings {
+                width: 25%;
+                max-width: none;
+                margin-left: 10px;
+            }
+            #capturedPhotos {
+                width: 100%;
+                order: 1;
             }
         }
         button {
@@ -172,7 +182,6 @@
         <div>
             <button id="switchCamera" aria-label="Switch Camera">Switch Camera</button>
             <button id="startCapture" aria-label="Start Capture">Start Capture</button>
-            <!-- Removed the Download Photos button since download is automatic -->
         </div>
         <div class="settings">
             <label for="numPhotos">Number of Photos:</label>
@@ -194,7 +203,6 @@
         </div>
         <div id="capturedPhotos"></div>
 
-        <!-- Modal -->
         <div id="modal">
             <h2>Error</h2>
             <p id="modalMessage"></p>
@@ -202,7 +210,6 @@
         </div>
     </div>
 
-    <!-- Include app.js -->
     <script src="app.js"></script>
 </body>
 </html>
