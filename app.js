@@ -314,15 +314,17 @@ function closeModal() {
 }
 
 /**
- * Updates the zoom level of the app.
+ * Updates the zoom level of the camera feed.
  */
 function updateZoom() {
-    document.getElementById('app').style.transform = `scale(${currentZoom})`;
+    const videoContainer = document.getElementById('videoContainer');
+    videoContainer.style.transform = `scale(${currentZoom})`;
+    videoContainer.style.transformOrigin = 'center center';
     document.getElementById('zoomLevel').textContent = `${Math.round(currentZoom * 100)}%`;
 }
 
 /**
- * Increases the zoom level of the app.
+ * Increases the zoom level of the camera feed.
  */
 function zoomIn() {
     if (currentZoom < maxZoom) {
@@ -332,7 +334,7 @@ function zoomIn() {
 }
 
 /**
- * Decreases the zoom level of the app.
+ * Decreases the zoom level of the camera feed.
  */
 function zoomOut() {
     if (currentZoom > minZoom) {
