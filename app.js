@@ -10,9 +10,6 @@ let captureAudio;
 let currentCameraFacing = 'environment';
 let track = null;
 let fileNameOption = 'auto';
-let liveZoomControl;
-let maxZoom = 3; // Default max zoom
-let minZoom = 1; // Default min zoom
 
 /**
  * Initializes the app by setting up event listeners and starting the video stream.
@@ -21,13 +18,11 @@ async function init() {
     video = document.getElementById('video');
     canvas = document.getElementById('canvas');
     capturedPhotos = [];
-    liveZoomControl = document.getElementById('liveZoom');
 
     document.getElementById('switchCamera').addEventListener('click', switchCamera);
     document.getElementById('startCapture').addEventListener('click', startCapture);
     document.getElementById('applySettings').addEventListener('click', applySettings);
     document.getElementById('fileNameOption').addEventListener('change', changeFileNameOption);
-    liveZoomControl.addEventListener('input', handleLiveZoom);
 
     try {
         await startVideoStream();
@@ -62,22 +57,6 @@ async function startVideoStream() {
         video.srcObject = stream;
         await video.play();
         track = stream.getVideoTracks()[0];
-
-        // Get camera zoom capabilities
-        const capabilities = track.getCapabilities();
-        if (capabilities.zoom) {
-            minZoom = capabilities.zoom.min;
-            maxZoom = capabilities.zoom.max;
-            liveZoomControl.min = minZoom;
-            liveZoomControl.max = maxZoom;
-            liveZoomControl.step = (capabilities.zoom.max - capabilities.zoom.min) / 20;
-            const settings = track.getSettings();
-            liveZoomControl.value = settings.zoom || minZoom;
-        } else {
-            // If zoom is not supported, hide the zoom slider
-            liveZoomControl.parentElement.style.display = 'none';
-            console.warn("Zoom not supported on this device.");
-        }
 
         // Adjust layout after starting video
         adjustLayout();
@@ -227,17 +206,11 @@ async function capturePhoto() {
 
     if (track && 'zoom' in track.getCapabilities()) {
         const capabilities = track.getCapabilities();
-        if (zoom >= capabilities.zoom.min && zoom <= capabilities.zoom.max) {
+        if (capabilities.zoom && zoom >= capabilities.zoom.min && zoom <= capabilities.zoom.max) {
             const constraints = {
                 advanced: [{ zoom: zoom }]
             };
-            try {
-                await track.applyConstraints(constraints);
-                liveZoomControl.value = zoom; // Sync live zoom slider with capture zoom
-            } catch (err) {
-                console.warn(`Failed to apply zoom level ${zoom}:`, err);
-                showModal(`Failed to apply zoom level ${zoom}.`);
-            }
+            await track.applyConstraints(constraints);
         } else {
             console.warn(`Zoom level ${zoom} is out of range. Supported range: ${capabilities.zoom.min} - ${capabilities.zoom.max}`);
             showModal(`Zoom level ${zoom} is not supported by your camera. Supported range: ${capabilities.zoom.min} - ${capabilities.zoom.max}`);
@@ -267,28 +240,6 @@ async function capturePhoto() {
 
     // Hide loading spinner
     document.body.classList.remove('loading');
-}
-
-/**
- * Handles real-time zooming via the zoom slider.
- * @param {Event} event - The input event from the zoom slider.
- */
-async function handleLiveZoom(event) {
-    const zoomValue = parseFloat(event.target.value);
-    if (track && 'zoom' in track.getCapabilities()) {
-        const capabilities = track.getCapabilities();
-        if (zoomValue >= capabilities.zoom.min && zoomValue <= capabilities.zoom.max) {
-            const constraints = {
-                advanced: [{ zoom: zoomValue }]
-            };
-            try {
-                await track.applyConstraints(constraints);
-            } catch (err) {
-                console.warn(`Failed to apply live zoom level ${zoomValue}:`, err);
-                showModal(`Failed to apply live zoom level ${zoomValue}.`);
-            }
-        }
-    }
 }
 
 /**
