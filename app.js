@@ -11,8 +11,8 @@ let fileNameOption = 'auto';
 
 let currentZoom = 1;
 const zoomStep = 0.1;
-const minZoom = 0.5;
-const maxZoom = 2;
+let minZoom = 1;
+let maxZoom = 1;
 
 let isDragging = false;
 let startX, startY, initialX, initialY;
@@ -66,8 +66,8 @@ async function startVideoStream() {
         const constraints = {
             video: {
                 facingMode: currentCameraFacing,
-                width: { ideal: 4096 },
-                height: { ideal: 2160 }
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
             }
         };
 
@@ -103,14 +103,13 @@ async function checkCameraCapabilities() {
     
     if (capabilities.zoom) {
         document.getElementById('zoomControls').style.display = 'flex';
-        // Update zoom range based on capabilities
         minZoom = capabilities.zoom.min;
         maxZoom = capabilities.zoom.max;
+        currentZoom = minZoom;
+        updateZoomUI();
     } else {
         document.getElementById('zoomControls').style.display = 'none';
     }
-    
-    // Implement checks for other capabilities (e.g., white balance, focus) here
 }
 
 /**
@@ -120,7 +119,6 @@ function handleOrientationChange() {
     console.log('Handling orientation change...');
     const app = document.getElementById('app');
     const videoContainer = document.getElementById('videoContainer');
-    const draggableContainer = document.getElementById('draggableContainer');
     const controlsSettingsContainer = document.querySelector('.controls-settings-container');
 
     if (window.innerHeight > window.innerWidth) {
@@ -139,14 +137,6 @@ function handleOrientationChange() {
         console.log('Switched to landscape mode');
     }
 
-    // Reset the position of the draggable container
-    draggableContainer.style.left = '0';
-    draggableContainer.style.top = '0';
-
-    // Adjust video size
-    video.style.width = '100%';
-    video.style.height = '100%';
-
     adjustLayout();
 }
 
@@ -160,19 +150,15 @@ function adjustLayout() {
         canvas.height = video.videoHeight;
         console.log(`Canvas size adjusted to ${canvas.width}x${canvas.height}`);
 
-        // Adjust draggable container size to match video aspect ratio
         const videoContainer = document.getElementById('videoContainer');
-        const draggableContainer = document.getElementById('draggableContainer');
         const aspectRatio = video.videoWidth / video.videoHeight;
         
         if (window.innerHeight > window.innerWidth) {
             // Portrait mode
-            draggableContainer.style.width = '100%';
-            draggableContainer.style.height = `${videoContainer.offsetWidth / aspectRatio}px`;
+            videoContainer.style.height = `${videoContainer.offsetWidth / aspectRatio}px`;
         } else {
             // Landscape mode
-            draggableContainer.style.height = '100%';
-            draggableContainer.style.width = `${videoContainer.offsetHeight * aspectRatio}px`;
+            videoContainer.style.width = `${videoContainer.offsetHeight * aspectRatio}px`;
         }
     } else {
         console.log('Video dimensions not available, retrying in 500ms');
@@ -302,16 +288,11 @@ async function capturePhoto() {
     // Show loading spinner
     document.body.classList.add('loading');
 
-    if (track && 'zoom' in track.getCapabilities()) {
-        const capabilities = track.getCapabilities();
-        if (capabilities.zoom && zoom >= capabilities.zoom.min && zoom <= capabilities.zoom.max) {
-            const constraints = {
-                advanced: [{ zoom: zoom }]
-            };
-            await track.applyConstraints(constraints);
-        } else {
-            console.warn(`Zoom level ${zoom} is out of range. Supported range: ${capabilities.zoom.min} - ${capabilities.zoom.max}`);
-            showModal(`Zoom level ${zoom} is not supported by your camera. Supported range: ${capabilities.zoom.min} - ${capabilities.zoom.max}`);
+    if (track && track.getCapabilities().zoom) {
+        try {
+            await track.applyConstraints({ advanced: [{ zoom: zoom }] });
+        } catch (error) {
+            console.warn(`Failed to set zoom level ${zoom}: ${error}`);
         }
     }
 
@@ -412,25 +393,33 @@ function initZoomControls() {
 /**
  * Updates the zoom level of the video feed.
  */
-function updateZoom() {
+async function updateZoom() {
     console.log(`Updating zoom to ${currentZoom}`);
     if (track && track.getCapabilities().zoom) {
-        track.applyConstraints({ advanced: [{ zoom: currentZoom }] });
+        try {
+            await track.applyConstraints({ advanced: [{ zoom: currentZoom }] });
+            updateZoomUI();
+        } catch (error) {
+            console.warn(`Failed to set zoom level ${currentZoom}: ${error}`);
+        }
     }
+}
+
+function updateZoomUI() {
     document.getElementById('zoomLevel').textContent = `${Math.round(currentZoom * 100)}%`;
 }
 
-function zoomIn() {
+async function zoomIn() {
     if (currentZoom < maxZoom) {
         currentZoom = Math.min(currentZoom + zoomStep, maxZoom);
-        updateZoom();
+        await updateZoom();
     }
 }
 
-function zoomOut() {
+async function zoomOut() {
     if (currentZoom > minZoom) {
         currentZoom = Math.max(currentZoom - zoomStep, minZoom);
-        updateZoom();
+        await updateZoom();
     }
 }
 
@@ -439,10 +428,10 @@ function zoomOut() {
  */
 function initDraggable() {
     console.log('Initializing draggable functionality...');
-    const draggableContainer = document.getElementById('draggableContainer');
+    const videoContainer = document.getElementById('videoContainer');
     
-    draggableContainer.addEventListener('mousedown', startDragging);
-    draggableContainer.addEventListener('touchstart', startDragging);
+    videoContainer.addEventListener('mousedown', startDragging);
+    videoContainer.addEventListener('touchstart', startDragging);
     
     document.addEventListener('mousemove', drag);
     document.addEventListener('touchmove', drag);
@@ -460,9 +449,9 @@ function startDragging(e) {
         startX = e.clientX;
         startY = e.clientY;
     }
-    const draggableContainer = document.getElementById('draggableContainer');
-    initialX = draggableContainer.offsetLeft;
-    initialY = draggableContainer.offsetTop;
+    const videoContainer = document.getElementById('videoContainer');
+    initialX = videoContainer.scrollLeft;
+    initialY = videoContainer.scrollTop;
     e.preventDefault();
 }
 
@@ -478,12 +467,12 @@ function drag(e) {
         currentY = e.clientY;
     }
     
-    const deltaX = currentX - startX;
-    const deltaY = currentY - startY;
+    const deltaX = startX - currentX;
+    const deltaY = startY - currentY;
     
-    const draggableContainer = document.getElementById('draggableContainer');
-    draggableContainer.style.left = `${initialX + deltaX}px`;
-    draggableContainer.style.top = `${initialY + deltaY}px`;
+    const videoContainer = document.getElementById('videoContainer');
+    videoContainer.scrollLeft = initialX + deltaX;
+    videoContainer.scrollTop = initialY + deltaY;
 }
 
 function stopDragging() {
