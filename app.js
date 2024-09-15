@@ -27,6 +27,10 @@ async function init() {
         canvas = document.getElementById('canvas');
         capturedPhotos = [];
 
+        if (!('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices)) {
+            throw new Error("Your browser does not support camera access.");
+        }
+
         document.getElementById('switchCamera').addEventListener('click', switchCamera);
         document.getElementById('startCapture').addEventListener('click', startCapture);
         document.getElementById('applySettings').addEventListener('click', applySettings);
@@ -59,46 +63,54 @@ async function init() {
 async function startVideoStream() {
     try {
         console.log('Starting video stream...');
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            throw new Error("Your browser does not support camera access.");
-        }
-
         const constraints = {
             video: {
                 facingMode: currentCameraFacing,
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-                aspectRatio: 16/9
+                width: { ideal: 4096 },
+                height: { ideal: 2160 }
             }
         };
 
         stream = await navigator.mediaDevices.getUserMedia(constraints);
         video.srcObject = stream;
-        video.onloadedmetadata = function(e) {
-            video.play();
-        };
+        await video.play();
         track = stream.getVideoTracks()[0];
 
-        // Apply the highest available resolution
-        const capabilities = track.getCapabilities();
-        const settings = {
-            width: capabilities.width.max,
-            height: capabilities.height.max
-        };
-        await track.applyConstraints(settings);
+        await checkCameraCapabilities();
 
         console.log('Video stream started successfully');
     } catch (err) {
         console.error('Error accessing the camera:', err);
+        let errorMessage = "An unexpected error occurred while accessing the camera.";
         if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-            showModal("Camera access was denied. Please allow camera permissions in your browser settings and reload the page.");
+            errorMessage = "Camera access was denied. Please allow camera permissions in your browser settings and reload the page.";
         } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-            showModal("No camera devices found. Please connect a camera to your device and try again.");
-        } else {
-            showModal(`An unexpected error occurred: ${err.message}`);
+            errorMessage = "No camera devices found. Please connect a camera to your device and try again.";
+        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+            errorMessage = "Unable to access the camera. It may be already in use by another application.";
         }
-        // Don't re-throw the error, handle it here
+        showModal(errorMessage);
+        throw err;
     }
+}
+
+/**
+ * Checks and adapts to camera capabilities.
+ */
+async function checkCameraCapabilities() {
+    const capabilities = track.getCapabilities();
+    console.log('Camera capabilities:', capabilities);
+    
+    if (capabilities.zoom) {
+        document.getElementById('zoomControls').style.display = 'flex';
+        // Update zoom range based on capabilities
+        minZoom = capabilities.zoom.min;
+        maxZoom = capabilities.zoom.max;
+    } else {
+        document.getElementById('zoomControls').style.display = 'none';
+    }
+    
+    // Implement checks for other capabilities (e.g., white balance, focus) here
 }
 
 /**
@@ -109,19 +121,21 @@ function handleOrientationChange() {
     const app = document.getElementById('app');
     const videoContainer = document.getElementById('videoContainer');
     const draggableContainer = document.getElementById('draggableContainer');
-    const video = document.getElementById('video');
+    const controlsSettingsContainer = document.querySelector('.controls-settings-container');
 
     if (window.innerHeight > window.innerWidth) {
         // Portrait mode
         app.style.flexDirection = 'column';
         videoContainer.style.width = '100%';
         videoContainer.style.height = '50vh';
+        controlsSettingsContainer.style.width = '100%';
         console.log('Switched to portrait mode');
     } else {
         // Landscape mode
         app.style.flexDirection = 'row';
         videoContainer.style.width = '60%';
         videoContainer.style.height = 'calc(100vh - 50px)';
+        controlsSettingsContainer.style.width = '40%';
         console.log('Switched to landscape mode');
     }
 
@@ -242,7 +256,7 @@ async function captureSequence() {
     }
     document.getElementById('startCapture').disabled = false;
     document.getElementById('switchCamera').disabled = false;
-    await downloadPhotos(); // Automatically start the download
+    await downloadPhotos();
     console.log('Capture sequence completed');
 }
 
@@ -304,18 +318,19 @@ async function capturePhoto() {
     // Give time for zoom to adjust
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Create a temporary canvas with the video's native size
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = video.videoWidth;
-    tempCanvas.height = video.videoHeight;
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+    let photoData;
+    if ('ImageCapture' in window) {
+        const imageCapture = new ImageCapture(track);
+        const blob = await imageCapture.takePhoto();
+        photoData = URL.createObjectURL(blob);
+    } else {
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        photoData = canvas.toDataURL('image/jpeg', 0.95);
+    }
 
-    // Get the image data as WebP
-    const photoData = tempCanvas.toDataURL('image/webp', 0.9);
     capturedPhotos.push(photoData);
 
-    // Create a thumbnail for display
     const img = document.createElement('img');
     img.src = photoData;
     img.className = 'capturedPhoto';
@@ -329,7 +344,7 @@ async function capturePhoto() {
 
     // Hide loading spinner
     document.body.classList.remove('loading');
-    console.log('Photo captured successfully in WebP format');
+    console.log('Photo captured successfully');
 }
 
 /**
@@ -371,7 +386,7 @@ async function downloadPhotos() {
         const photo = capturedPhotos[i];
         const link = document.createElement('a');
         link.href = photo;
-        link.download = `${exportFileNamePrefix}_${i + 1}.webp`;
+        link.download = `${exportFileNamePrefix}_${i + 1}.jpg`;
 
         // For mobile devices, simulate a click event
         link.style.display = 'none';
@@ -382,7 +397,7 @@ async function downloadPhotos() {
         // Give time between downloads to ensure they start properly
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
-    console.log('Photos downloaded successfully in WebP format');
+    console.log('Photos downloaded successfully');
 }
 
 /**
@@ -399,22 +414,22 @@ function initZoomControls() {
  */
 function updateZoom() {
     console.log(`Updating zoom to ${currentZoom}`);
-    const video = document.getElementById('video');
-    video.style.transform = `scale(${currentZoom})`;
-    video.style.transformOrigin = 'center center';
+    if (track && track.getCapabilities().zoom) {
+        track.applyConstraints({ advanced: [{ zoom: currentZoom }] });
+    }
     document.getElementById('zoomLevel').textContent = `${Math.round(currentZoom * 100)}%`;
 }
 
 function zoomIn() {
     if (currentZoom < maxZoom) {
-        currentZoom += zoomStep;
+        currentZoom = Math.min(currentZoom + zoomStep, maxZoom);
         updateZoom();
     }
 }
 
 function zoomOut() {
     if (currentZoom > minZoom) {
-        currentZoom -= zoomStep;
+        currentZoom = Math.max(currentZoom - zoomStep, minZoom);
         updateZoom();
     }
 }
@@ -481,24 +496,29 @@ function stopDragging() {
  */
 function showModal(message) {
     console.log('Showing modal:', message);
-    alert(message); // Using alert for simplicity, replace with a proper modal implementation
+    const modal = document.getElementById('modal');
+    const modalContent = document.getElementById('modalContent');
+    modalContent.textContent = message;
+    modal.style.display = 'flex';
+    
+    // Close the modal when clicking outside of it
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
 }
 
 /**
- * Checks if the camera is accessible.
- * @returns {boolean} True if the camera is accessible, false otherwise.
+ * Optimizes video rendering using requestAnimationFrame
  */
-function checkCameraAccess() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        showModal("Your browser doesn't support camera access. Please try using a different browser.");
-        return false;
-    }
-    return true;
+function updateVideoFrame() {
+    // Any video processing logic can go here
+    requestAnimationFrame(updateVideoFrame);
 }
 
 // Initialize the app when the window loads
-window.onload = function() {
-    if (checkCameraAccess()) {
-        init();
-    }
+window.onload = () => {
+    init();
+    requestAnimationFrame(updateVideoFrame);
 };
