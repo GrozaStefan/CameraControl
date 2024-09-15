@@ -74,7 +74,9 @@ async function startVideoStream() {
 
         stream = await navigator.mediaDevices.getUserMedia(constraints);
         video.srcObject = stream;
-        await video.play();
+        video.onloadedmetadata = function(e) {
+            video.play();
+        };
         track = stream.getVideoTracks()[0];
 
         // Apply the highest available resolution
@@ -95,7 +97,7 @@ async function startVideoStream() {
         } else {
             showModal(`An unexpected error occurred: ${err.message}`);
         }
-        throw err; // Re-throw the error to be caught in the init function
+        // Don't re-throw the error, handle it here
     }
 }
 
@@ -328,6 +330,7 @@ async function capturePhoto() {
     // Hide loading spinner
     document.body.classList.remove('loading');
     console.log('Photo captured successfully in WebP format');
+}
 
 /**
  * Switches between front and back cameras.
@@ -380,6 +383,7 @@ async function downloadPhotos() {
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
     console.log('Photos downloaded successfully in WebP format');
+}
 
 /**
  * Initializes the zoom controls.
@@ -480,5 +484,21 @@ function showModal(message) {
     alert(message); // Using alert for simplicity, replace with a proper modal implementation
 }
 
+/**
+ * Checks if the camera is accessible.
+ * @returns {boolean} True if the camera is accessible, false otherwise.
+ */
+function checkCameraAccess() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showModal("Your browser doesn't support camera access. Please try using a different browser.");
+        return false;
+    }
+    return true;
+}
+
 // Initialize the app when the window loads
-window.onload = init;
+window.onload = function() {
+    if (checkCameraAccess()) {
+        init();
+    }
+};
