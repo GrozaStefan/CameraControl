@@ -9,13 +9,11 @@ let currentCameraFacing = 'environment';
 let track = null;
 let fileNameOption = 'auto';
 
-let currentZoom = 1;
-const zoomStep = 0.1;
-let minZoom = 1;
-let maxZoom = 1;
+let containerSize = 100; // Percentage
+const sizeStep = 10; // Percentage
 
 let isDragging = false;
-let startX, startY, initialX, initialY;
+let startX, startY, scrollLeft, scrollTop;
 
 /**
  * Initializes the app by setting up event listeners and starting the video stream.
@@ -47,7 +45,7 @@ async function init() {
         window.addEventListener('orientationchange', handleOrientationChange);
         window.addEventListener('resize', handleOrientationChange);
 
-        initZoomControls();
+        initSizeControls();
         initDraggable();
         handleOrientationChange();
         console.log('App initialized successfully');
@@ -76,8 +74,6 @@ async function startVideoStream() {
         await video.play();
         track = stream.getVideoTracks()[0];
 
-        await checkCameraCapabilities();
-
         console.log('Video stream started successfully');
     } catch (err) {
         console.error('Error accessing the camera:', err);
@@ -91,24 +87,6 @@ async function startVideoStream() {
         }
         showModal(errorMessage);
         throw err;
-    }
-}
-
-/**
- * Checks and adapts to camera capabilities.
- */
-async function checkCameraCapabilities() {
-    const capabilities = track.getCapabilities();
-    console.log('Camera capabilities:', capabilities);
-    
-    if (capabilities.zoom) {
-        document.getElementById('zoomControls').style.display = 'flex';
-        minZoom = capabilities.zoom.min;
-        maxZoom = capabilities.zoom.max;
-        currentZoom = minZoom;
-        updateZoomUI();
-    } else {
-        document.getElementById('zoomControls').style.display = 'none';
     }
 }
 
@@ -382,44 +360,37 @@ async function downloadPhotos() {
 }
 
 /**
- * Initializes the zoom controls.
+ * Initializes the size controls.
  */
-function initZoomControls() {
-    console.log('Initializing zoom controls...');
-    document.getElementById('zoomIn').addEventListener('click', zoomIn);
-    document.getElementById('zoomOut').addEventListener('click', zoomOut);
+function initSizeControls() {
+    console.log('Initializing size controls...');
+    document.getElementById('sizeIncrease').addEventListener('click', increaseSize);
+    document.getElementById('sizeDecrease').addEventListener('click', decreaseSize);
 }
 
 /**
- * Updates the zoom level of the video feed.
+ * Updates the size of the video container.
  */
-async function updateZoom() {
-    console.log(`Updating zoom to ${currentZoom}`);
-    if (track && track.getCapabilities().zoom) {
-        try {
-            await track.applyConstraints({ advanced: [{ zoom: currentZoom }] });
-            updateZoomUI();
-        } catch (error) {
-            console.warn(`Failed to set zoom level ${currentZoom}: ${error}`);
-        }
+function updateContainerSize() {
+    console.log(`Updating container size to ${containerSize}%`);
+    const videoContainer = document.getElementById('videoContainer');
+    videoContainer.style.width = `${containerSize}%`;
+    videoContainer.style.height = `${containerSize}%`;
+    document.getElementById('sizeLevel').textContent = `${containerSize}%`;
+    adjustLayout();
+}
+
+function increaseSize() {
+    if (containerSize < 200) {
+        containerSize += sizeStep;
+        updateContainerSize();
     }
 }
 
-function updateZoomUI() {
-    document.getElementById('zoomLevel').textContent = `${Math.round(currentZoom * 100)}%`;
-}
-
-async function zoomIn() {
-    if (currentZoom < maxZoom) {
-        currentZoom = Math.min(currentZoom + zoomStep, maxZoom);
-        await updateZoom();
-    }
-}
-
-async function zoomOut() {
-    if (currentZoom > minZoom) {
-        currentZoom = Math.max(currentZoom - zoomStep, minZoom);
-        await updateZoom();
+function decreaseSize() {
+    if (containerSize > 50) {
+        containerSize -= sizeStep;
+        updateContainerSize();
     }
 }
 
@@ -431,48 +402,47 @@ function initDraggable() {
     const videoContainer = document.getElementById('videoContainer');
     
     videoContainer.addEventListener('mousedown', startDragging);
-    videoContainer.addEventListener('touchstart', startDragging);
+    videoContainer.addEventListener('touchstart', startDragging, { passive: false });
     
-    document.addEventListener('mousemove', drag);
-    document.addEventListener('touchmove', drag);
+    videoContainer.addEventListener('mousemove', drag);
+    videoContainer.addEventListener('touchmove', drag, { passive: false });
     
-    document.addEventListener('mouseup', stopDragging);
-    document.addEventListener('touchend', stopDragging);
+    videoContainer.addEventListener('mouseup', stopDragging);
+    videoContainer.addEventListener('mouseleave', stopDragging);
+    videoContainer.addEventListener('touchend', stopDragging);
 }
 
 function startDragging(e) {
     isDragging = true;
-    if (e.type === 'touchstart') {
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-    } else {
-        startX = e.clientX;
-        startY = e.clientY;
-    }
     const videoContainer = document.getElementById('videoContainer');
-    initialX = videoContainer.scrollLeft;
-    initialY = videoContainer.scrollTop;
+    if (e.type === 'touchstart') {
+        startX = e.touches[0].pageX - videoContainer.offsetLeft;
+        startY = e.touches[0].pageY - videoContainer.offsetTop;
+    } else {
+        startX = e.pageX - videoContainer.offsetLeft;
+        startY = e.pageY - videoContainer.offsetTop;
+    }
+    scrollLeft = videoContainer.scrollLeft;
+    scrollTop = videoContainer.scrollTop;
     e.preventDefault();
 }
 
 function drag(e) {
     if (!isDragging) return;
-    
-    let currentX, currentY;
-    if (e.type === 'touchmove') {
-        currentX = e.touches[0].clientX;
-        currentY = e.touches[0].clientY;
-    } else {
-        currentX = e.clientX;
-        currentY = e.clientY;
-    }
-    
-    const deltaX = startX - currentX;
-    const deltaY = startY - currentY;
-    
+    e.preventDefault();
     const videoContainer = document.getElementById('videoContainer');
-    videoContainer.scrollLeft = initialX + deltaX;
-    videoContainer.scrollTop = initialY + deltaY;
+    let x, y;
+    if (e.type === 'touchmove') {
+        x = e.touches[0].pageX - videoContainer.offsetLeft;
+        y = e.touches[0].pageY - videoContainer.offsetTop;
+    } else {
+        x = e.pageX - videoContainer.offsetLeft;
+        y = e.pageY - videoContainer.offsetTop;
+    }
+    const walkX = x - startX;
+    const walkY = y - startY;
+    videoContainer.scrollLeft = scrollLeft - walkX;
+    videoContainer.scrollTop = scrollTop - walkY;
 }
 
 function stopDragging() {
