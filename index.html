@@ -160,6 +160,10 @@
     </style>
 </head>
 <body>
+    <div id="loadingIndicator" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgba(0,0,0,0.5); color: white; padding: 20px; border-radius: 10px; display: none;">
+        Loading camera...
+    </div>
+    
     <div id="app">
         <h1>Camera Photo Capture App</h1>
         <div id="videoContainer">
@@ -204,5 +208,11 @@
     </div>
 
     <script src="app.js"></script>
+    <script>
+        document.getElementById('loadingIndicator').style.display = 'block';
+        window.addEventListener('load', function() {
+            document.getElementById('loadingIndicator').style.display = 'none';
+        });
+    </script>
 </body>
 </html>
