@@ -30,13 +30,13 @@
             width: 100%;
             height: 50vh;
             background-color: black;
-            overflow: scroll;
+            overflow: auto;
+            cursor: move;
         }
         #video {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            pointer-events: none;
         }
         #canvas {
             display: none;
@@ -94,7 +94,7 @@
             max-width: 45%;
             height: auto;
         }
-        #zoomControls {
+        #sizeControls {
             position: fixed;
             bottom: 20px;
             right: 20px;
@@ -104,14 +104,14 @@
             display: flex;
             align-items: center;
         }
-        #zoomControls button {
+        #sizeControls button {
             font-size: 18px;
             width: 30px;
             height: 30px;
             padding: 0;
             margin: 0 5px;
         }
-        #zoomLevel {
+        #sizeLevel {
             margin: 0 10px;
             font-weight: bold;
         }
@@ -226,10 +226,10 @@
         <div id="capturedPhotos"></div>
     </div>
 
-    <div id="zoomControls">
-        <button id="zoomOut" aria-label="Zoom Out">-</button>
-        <span id="zoomLevel">100%</span>
-        <button id="zoomIn" aria-label="Zoom In">+</button>
+    <div id="sizeControls">
+        <button id="sizeDecrease" aria-label="Decrease Size">-</button>
+        <span id="sizeLevel">100%</span>
+        <button id="sizeIncrease" aria-label="Increase Size">+</button>
     </div>
 
     <div id="modal" class="modal">
