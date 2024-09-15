@@ -1,1 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Camera Photo Capture App</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #f5f5f5;
+            overflow-y: auto;
+        }
+        h1 {
+            color: #6200ea;
+            margin: 10px 0;
+            font-size: 24px;
+            text-align: center;
+        }
+        #videoContainer {
+            position: relative;
+            width: 70%;
+            height: 70%;
+            background-color: black;
+            overflow: auto;
+            cursor: move;
+            margin: 0 auto;
+        }
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #canvas {
+            display: none;
+        }
+        .controls-settings-container {
+            flex: 1;
+            overflow-y: auto;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            padding: 10px;
+            background-color: #f0f0f0;
+        }
+        button {
+            margin: 0 5px;
+            padding: 10px 15px;
+            font-size: 16px;
+            background-color: #6200ea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #3700b3;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .settings {
+            padding: 10px;
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .settings label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .settings input, .settings select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        #capturedPhotos {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 10px;
+        }
+        .capturedPhoto {
+            margin: 5px;
+            max-width: 45%;
+            height: auto;
+        }
+        #sizeControls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+        }
+        #sizeControls button {
+            font-size: 18px;
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            margin: 0 5px;
+        }
+        #sizeLevel {
+            margin: 0 10px;
+            font-weight: bold;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            padding: 20px;
+            border-radius: 5px;
+            max-width: 80%;
+        }
+        @media (orientation: landscape) {
+            #app {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            h1 {
+                width: 100%;
+                order: -1;
+            }
+            #videoContainer {
+                width: 60%;
+                height: calc(100vh - 50px);
+            }
+            .controls-settings-container {
+                width: 40%;
+                height: calc(100vh - 50px);
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+                padding: 10px;
+                box-sizing: border-box;
+                overflow-y: auto;
+            }
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+                background-color: transparent;
+            }
+            .controls button {
+                margin: 5px 0;
+            }
+            .settings {
+                margin-top: 10px;
+            }
+            #capturedPhotos {
+                width: 100%;
+                order: 1;
+            }
+        }
+        @media (orientation: landscape) and (max-height: 500px) {
+            #videoContainer {
+                width: 50%;
+            }
+            .controls-settings-container {
+                width: 50%;
+            }
+        }
+        @media (min-width: 1024px) {
+            h1 {
+                font-size: 28px;
+            }
+            .settings input, .settings select {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>Camera Photo Capture App</h1>
+        <div id="videoContainer">
+            <video id="video" autoplay playsinline></video>
+        </div>
+        <div id="canvasContainer">
+            <canvas id="canvas"></canvas>
+        </div>
+        <div class="controls-settings-container">
+            <div class="controls">
+                <button id="switchCamera" aria-label="Switch Camera">Switch Camera</button>
+                <button id="startCapture" aria-label="Start Capture">Start Capture</button>
+            </div>
+            <div class="settings">
+                <label for="numPhotos">Number of Photos:</label>
+                <input type="number" id="numPhotos" min="1" max="10" value="4">
 
+                <label for="zoomLevels">Zoom Levels (comma-separated):</label>
+                <input type="text" id="zoomLevels" value="1, 1.5, 2, 2.5">
+
+                <label for="delayBetweenPhotos">Delays Between Photos (seconds, comma-separated):</label>
+                <input type="text" id="delayBetweenPhotos" value="2, 2, 2, 5">
+
+                <label for="fileNameOption">File Naming Option:</label>
+                <select id="fileNameOption">
+                    <option value="auto" selected>Automatic</option>
+                    <option value="manual">Manual</option>
+                </select>
+
+                <button id="applySettings" aria-label="Apply Settings">Apply Settings</button>
+            </div>
+        </div>
+        <div id="capturedPhotos"></div>
+    </div>
+
+    <div id="sizeControls">
+        <button id="sizeDecrease" aria-label="Decrease Size">-</button>
+        <span id="sizeLevel">70%</span>
+        <button id="sizeIncrease" aria-label="Increase Size">+</button>
+    </div>
+
+    <div id="modal" class="modal">
+        <div id="modalContent" class="modal-content"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
