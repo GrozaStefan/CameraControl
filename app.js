@@ -9,7 +9,7 @@ let currentCameraFacing = 'environment';
 let track = null;
 let fileNameOption = 'auto';
 
-let containerSize = 100; // Percentage
+let containerSize = 70; // Initial size set to 70%
 const sizeStep = 10; // Percentage
 
 let isDragging = false;
@@ -48,6 +48,7 @@ async function init() {
         initSizeControls();
         initDraggable();
         handleOrientationChange();
+        updateContainerSize(); // Set initial size
         console.log('App initialized successfully');
     } catch (err) {
         console.error('Error during app initialization:', err);
@@ -221,7 +222,23 @@ async function captureSequence() {
     document.getElementById('startCapture').disabled = false;
     document.getElementById('switchCamera').disabled = false;
     await downloadPhotos();
+    await resetZoom();
     console.log('Capture sequence completed');
+}
+
+/**
+ * Resets the camera zoom to 1.
+ */
+async function resetZoom() {
+    console.log('Resetting camera zoom...');
+    if (track && track.getCapabilities().zoom) {
+        try {
+            await track.applyConstraints({ advanced: [{ zoom: 1 }] });
+            console.log('Camera zoom reset to 1');
+        } catch (error) {
+            console.warn(`Failed to reset zoom: ${error}`);
+        }
+    }
 }
 
 /**
